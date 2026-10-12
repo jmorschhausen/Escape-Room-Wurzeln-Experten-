@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escape Room: Das Labyrinth der Wurzeln (Profi-Edition)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Orbitron:wght@400;600;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            labyrinth: {
+              900: '#070a12',
+              800: '#0f172a',
+              700: '#1e293b',
+              gold: '#f59e0b',
+              purple: '#a855f7',
+              cyan: '#06b6d4',
+              emerald: '#10b981',
+              ruby: '#f43f5e'
+            }
+          },
+          fontFamily: {
+            title: ['"Cinzel Decorative"', 'serif'],
+            tech: ['Orbitron', 'sans-serif'],
+            body: ['Rajdhani', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at center, #0f172a 0%, #04060a 100%);
+      font-family: 'Rajdhani', sans-serif;
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(168, 85, 247, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+    }
+
+    .glow-gold { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+    .glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.4); }
+    .glow-emerald { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+
+    .glow-text-gold { text-shadow: 0 0 12px rgba(245, 158, 11, 0.6); }
+    .glow-text-purple { text-shadow: 0 0 12px rgba(168, 85, 247, 0.6); }
+    .glow-text-cyan { text-shadow: 0 0 12px rgba(6, 182, 212, 0.6); }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #070a12; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a855f7; }
+
+    /* Inputs baseline styling */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    @keyframes pulse-bg {
+      0%, 100% { opacity: 0.25; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.08); }
+    }
+    .bg-pulse { animation: pulse-bg 10s infinite ease-in-out; }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen relative selection:bg-purple-500 selection:text-white">
+
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-purple-900/30 rounded-full blur-3xl bg-pulse"></div>
+    <div class="absolute top-1/2 -right-40 w-96 h-96 bg-amber-900/20 rounded-full blur-3xl bg-pulse" style="animation-delay: 3s;"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl bg-pulse" style="animation-delay: 6s;"></div>
+  </div>
+
+  <header class="relative z-10 glass-panel border-b border-purple-500/30 px-4 py-3 sticky top-0">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-purple-500/20 border border-purple-400 rounded-lg text-purple-400">
+          <i class="fa-solid fa-brain text-2xl glow-text-purple"></i>
+        </div>
+        <div>
+          <h1 class="font-title text-base sm:text-xl font-bold tracking-wider text-amber-400">DAS LABYRINTH DER WURZELN</h1>
+          <p class="text-xs font-tech text-purple-300">PROFI-EDITION &bull; LEVEL 2</p>
+        </div>
+      </div>
+
+      <div id="room-progress" class="flex items-center gap-1.5 md:gap-2 overflow-x-auto py-1">
+        <!-- Badges dynamically rendered -->
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="sound-btn" class="p-2.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-purple-400 transition" title="Sound An/Aus">
+          <i class="fa-solid fa-volume-high text-lg"></i>
+        </button>
+
+        <div class="flex items-center gap-2 bg-slate-950/90 border border-purple-500/40 px-3.5 py-1.5 rounded-xl shadow-inner">
+          <i class="fa-solid fa-stopwatch text-purple-400 animate-pulse"></i>
+          <span id="timer-display" class="font-tech text-lg font-bold text-purple-300">00:00</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 relative z-10 max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col justify-center">
+
+    <!-- Intro Screen -->
+    <div id="intro-screen" class="glass-panel p-6 md:p-10 rounded-2xl text-center space-y-6 max-w-3xl mx-auto border-purple-500/40">
+      <div class="w-20 h-20 bg-purple-500/20 border-2 border-purple-400 rounded-full flex items-center justify-center mx-auto text-amber-400 text-4xl glow-purple">
+        <i class="fa-solid fa-dragon"></i>
+      </div>
+      <div>
+        <span class="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-tech font-bold rounded-full uppercase tracking-widest mb-2">Für Expertinnen & Experten</span>
+        <h2 class="font-title text-2xl md:text-3xl text-amber-400">Willkommen im Labyrinth der Schatten</h2>
+      </div>
+      <p class="text-slate-300 text-base md:text-lg leading-relaxed">
+        Du hast die Grundkammern verlassen und stehst nun im mystischen <span class="text-purple-400 font-bold">Labyrinth der Profis</span>. Nur wer tiefere Wurzelgesetze beherrscht und selbst den antiken <span class="text-cyan-400 font-bold">Heron-Algorithmus</span> berechnen kann, entkommt dem Tempel!
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-left text-sm text-slate-300 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+        <div class="flex items-center gap-2.5"><i class="fa-solid fa-fire text-amber-400"></i> 1: Verschachtelte & Komplexere Wurzeln</div>
+        <div class="flex items-center gap-2.5"><i class="fa-solid fa-fire text-amber-400"></i> 2: Zahlenmengen & Terme (ohne &pi;)</div>
+        <div class="flex items-center gap-2.5"><i class="fa-solid fa-fire text-amber-400"></i> 3: Fortgeschrittene Wurzelgesetze</div>
+        <div class="flex items-center gap-2.5"><i class="fa-solid fa-fire text-amber-400"></i> 4: Teilweises Wurzelziehen (Große Radikanden)</div>
+        <div class="flex items-center gap-2.5"><i class="fa-solid fa-fire text-amber-400"></i> 5: Näherungswerte & Kommaschätzung</div>
+        <div class="flex items-center gap-2.5"><i class="fa-solid fa-fire text-amber-400"></i> 6: Der Heron-Algorithmus (x<sub>1</sub> & x<sub>2</sub>)</div>
+      </div>
+
+      <button id="start-btn" class="w-full py-4 bg-gradient-to-r from-purple-600 via-amber-500 to-purple-600 hover:opacity-95 text-slate-950 font-tech font-bold text-lg rounded-xl shadow-xl transition transform hover:-translate-y-0.5 active:translate-y-0 glow-purple">
+        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> CHALLENGE STARTEN
+      </button>
+    </div>
+
+    <!-- Active Room Container -->
+    <div id="room-container" class="hidden space-y-6">
+
+      <!-- Room Header Banner -->
+      <div class="glass-panel p-4 md:p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 border-purple-500">
+        <div>
+          <div class="flex items-center gap-2 text-xs font-tech text-purple-400 uppercase tracking-widest">
+            <span id="room-num-badge">Raum 1 von 6</span>
+          </div>
+          <h2 id="room-title" class="text-xl md:text-2xl font-bold text-white">Raum-Titel</h2>
+        </div>
+        <div>
+          <button id="hint-btn" class="px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl text-sm font-semibold transition flex items-center gap-2">
+            <i class="fa-solid fa-lightbulb text-amber-400"></i> Profi-Tipp
+          </button>
+        </div>
+      </div>
+
+      <!-- Hint Box -->
+      <div id="hint-box" class="hidden glass-panel p-4.5 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-amber-200 text-sm md:text-base flex items-start gap-3">
+        <i class="fa-solid fa-circle-info text-amber-400 text-xl mt-0.5"></i>
+        <div id="hint-text" class="leading-relaxed">Tipp Text...</div>
+      </div>
+
+      <!-- Dynamic Puzzle Content -->
+      <div id="puzzle-view" class="glass-panel p-6 md:p-8 rounded-2xl border border-purple-500/30">
+        <!-- Injected via JS -->
+      </div>
+
+      <!-- Solved Code Banner -->
+      <div id="code-banner" class="hidden glass-panel p-6 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 text-center space-y-4">
+        <div class="text-emerald-400 text-2xl font-bold flex items-center justify-center gap-2">
+          <i class="fa-solid fa-shield-check text-3xl"></i> Kammer-Code entziffert!
+        </div>
+        <p class="text-slate-300">Du hast die Prüfziffer für diesen Raum freigeschaltet:</p>
+        <div id="unlocked-code-display" class="font-tech text-3xl md:text-4xl font-extrabold text-amber-400 tracking-widest glow-text-gold">
+          CODE ZIFFER: ?
+        </div>
+        <button id="next-room-btn" class="px-8 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-tech font-bold text-lg rounded-xl transition shadow-lg glow-emerald">
+          Nächste Kammer betreten <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Final Master Lock Screen -->
+    <div id="final-screen" class="hidden glass-panel p-6 md:p-10 rounded-2xl border-amber-500/50 space-y-6 text-center max-w-3xl mx-auto">
+      <div class="w-20 h-20 bg-amber-500/20 border-2 border-amber-400 rounded-full flex items-center justify-center mx-auto text-amber-400 text-4xl glow-gold">
+        <i class="fa-solid fa-dungeon"></i>
+      </div>
+      <div>
+        <h2 class="font-title text-2xl md:text-3xl text-amber-400">Das Haupttor des Tempels</h2>
+        <p class="text-slate-300 text-sm md:text-base mt-2">
+          Gib den 6-stelligen Master-Code aus den Räumen 1 bis 6 ein, um das Tempeltor final zu öffnen!
+        </p>
+      </div>
+
+      <!-- Collected Codes Grid -->
+      <div class="grid grid-cols-6 gap-2 md:gap-3 my-6">
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800"><div class="text-[9px] font-tech text-purple-300">RAUM 1</div><div id="code-val-1" class="font-tech text-lg md:text-2xl font-bold text-amber-400">?</div></div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800"><div class="text-[9px] font-tech text-purple-300">RAUM 2</div><div id="code-val-2" class="font-tech text-lg md:text-2xl font-bold text-amber-400">?</div></div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800"><div class="text-[9px] font-tech text-purple-300">RAUM 3</div><div id="code-val-3" class="font-tech text-lg md:text-2xl font-bold text-amber-400">?</div></div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800"><div class="text-[9px] font-tech text-purple-300">RAUM 4</div><div id="code-val-4" class="font-tech text-lg md:text-2xl font-bold text-amber-400">?</div></div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800"><div class="text-[9px] font-tech text-purple-300">RAUM 5</div><div id="code-val-5" class="font-tech text-lg md:text-2xl font-bold text-amber-400">?</div></div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800"><div class="text-[9px] font-tech text-purple-300">RAUM 6</div><div id="code-val-6" class="font-tech text-lg md:text-2xl font-bold text-amber-400">?</div></div>
+      </div>
+
+      <!-- Keypad Inputs -->
+      <div class="flex justify-center items-center gap-2 md:gap-3 my-4">
+        <input type="number" id="master-input-1" maxlength="1" min="0" max="9" class="w-10 h-14 sm:w-14 sm:h-18 text-center font-tech text-xl sm:text-3xl font-bold bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl text-white outline-none transition" placeholder="0">
+        <input type="number" id="master-input-2" maxlength="1" min="0" max="9" class="w-10 h-14 sm:w-14 sm:h-18 text-center font-tech text-xl sm:text-3xl font-bold bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl text-white outline-none transition" placeholder="0">
+        <input type="number" id="master-input-3" maxlength="1" min="0" max="9" class="w-10 h-14 sm:w-14 sm:h-18 text-center font-tech text-xl sm:text-3xl font-bold bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl text-white outline-none transition" placeholder="0">
+        <input type="number" id="master-input-4" maxlength="1" min="0" max="9" class="w-10 h-14 sm:w-14 sm:h-18 text-center font-tech text-xl sm:text-3xl font-bold bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl text-white outline-none transition" placeholder="0">
+        <input type="number" id="master-input-5" maxlength="1" min="0" max="9" class="w-10 h-14 sm:w-14 sm:h-18 text-center font-tech text-xl sm:text-3xl font-bold bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl text-white outline-none transition" placeholder="0">
+        <input type="number" id="master-input-6" maxlength="1" min="0" max="9" class="w-10 h-14 sm:w-14 sm:h-18 text-center font-tech text-xl sm:text-3xl font-bold bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl text-white outline-none transition" placeholder="0">
+      </div>
+
+      <p id="master-feedback" class="text-sm min-h-[20px] font-semibold text-rose-400"></p>
+
+      <button id="unlock-master-btn" class="w-full py-4 bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 hover:opacity-95 text-slate-950 font-tech font-bold text-lg rounded-xl shadow-lg transition glow-gold">
+        <i class="fa-solid fa-key mr-2"></i> TEMPELTOR ENTRIEGELN
+      </button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen" class="hidden glass-panel p-8 md:p-12 rounded-2xl text-center space-y-6 max-w-2xl mx-auto border-emerald-500/60">
+      <div class="w-24 h-24 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-5xl glow-emerald animate-bounce">
+        <i class="fa-solid fa-trophy"></i>
+      </div>
+      <h2 class="font-title text-3xl md:text-4xl text-emerald-400">PROFI-TEMPEL GEMEISTERT!</h2>
+      <p class="text-slate-200 text-lg">
+        Ganz starke Leistung! Du hast alle 6 hochkomplexen Wurzelprüfungen sowie den Heron-Algorithmus erfolgreich bezwungen!
+      </p>
+
+      <div class="bg-slate-950/80 p-6 rounded-xl border border-slate-800 grid grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-slate-400 font-tech uppercase">Gesamtzeit</div>
+          <div id="final-time" class="font-tech text-2xl md:text-3xl font-bold text-purple-400">00:00</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 font-tech uppercase">Genutzte Tipps</div>
+          <div id="final-hints" class="font-tech text-2xl md:text-3xl font-bold text-amber-400">0</div>
+        </div>
+      </div>
+
+      <div id="star-rating" class="text-amber-400 text-3xl space-x-2">
+        <i class="fa-solid fa-star"></i>
+        <i class="fa-solid fa-star"></i>
+        <i class="fa-solid fa-star"></i>
+      </div>
+
+      <button id="restart-btn" class="px-8 py-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-tech font-bold rounded-xl transition">
+        <i class="fa-solid fa-rotate-right mr-2"></i> Nochmal Spielen
+      </button>
+    </div>
+
+  </main>
+
+  <script>
+    /* Audio Engine for Web Audio Sound Effects */
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+
+      playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.1) {
+        if (this.muted) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+
+      playSuccess() {
+        this.playTone(523.25, 'triangle', 0.1, 0.15); // C5
+        setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.15), 100); // E5
+        setTimeout(() => this.playTone(783.99, 'triangle', 0.1, 0.15), 200); // G5
+        setTimeout(() => this.playTone(1046.50, 'triangle', 0.3, 0.2), 300); // C6
+      }
+
+      playError() {
+        this.playTone(200, 'sawtooth', 0.15, 0.2);
+        setTimeout(() => this.playTone(150, 'sawtooth', 0.25, 0.2), 120);
+      }
+
+      playClick() {
+        this.playTone(700, 'sine', 0.04, 0.05);
+      }
+    }
+
+    const audio = new AudioEngine();
+
+    /* Game State */
+    const gameState = {
+      currentRoom: 0,
+      unlockedCodes: { 1: 8, 2: 3, 3: 6, 4: 5, 5: 9, 6: 2 },
+      roomSolved: [false, false, false, false, false, false, false],
+      hintsUsed: 0,
+      startTime: null,
+      timerInterval: null,
+      elapsedSeconds: 0
+    };
+
+    /* Room Definitions & Neutral Hints without giving solutions */
+    const roomDetails = [
+      {},
+      {
+        title: "Raum 1: Komplette Term- & Potenzwurzeln",
+        hint: "Ziehe die Wurzel aus jedem Faktor einzeln: √(a² · b⁴) = a · b². Bei Kommazahlen zähle die Nachkommastellen genau nach!"
+      },
+      {
+        title: "Raum 2: Zahlenmengen & Komplexe Terme",
+        hint: "Kürze und vereinfache Ausdrücke immer zuerst! Beachte: Ganze Zahlen (ℤ) beinhalten auch negative ganze Zahlen. Wurzelausdrücke aus Nicht-Quadratzahlen sind meist irrational (ℝ)."
+      },
+      {
+        title: "Raum 3: Profi-Wurzelgesetze",
+        hint: "Nutze die Rechengesetze: √a · √b = √(a · b) und √a / √b = √(a / b). Fasse Multiplikationen unter einer gemeinsamen Wurzel zusammen."
+      },
+      {
+        title: "Raum 4: Teilweises Wurzelziehen (Große Radikanden)",
+        hint: "Zerlege die Zahl unter der Wurzel in ein Produkt aus der größtmöglichen Quadratzahl (z.B. 4, 9, 16, 25, 36, 49, 64, 81, 100) und einem Rest."
+      },
+      {
+        title: "Raum 5: Intervallschachtelung & Runden",
+        hint: "Finde die nächstgelegene kleinere und größere Quadratzahl. Überlege, welcher Quadratzahl der Radikand näher steht, um die Nachkommastelle richtig abzuschätzen."
+      },
+      {
+        title: "Raum 6: Der antike Heron-Algorithmus",
+        hint: "Nutze die Heron-Formel schrittweise: xₙ₊₁ = ½ · (xₙ + a / xₙ). Addiere den aktuellen Wert xₙ mit (a / xₙ), bringe es auf einen gemeinsamen Nenner und halbiere das Ergebnis."
+      }
+    ];
+
+    // DOM Elements
+    const introScreen = document.getElementById('intro-screen');
+    const roomContainer = document.getElementById('room-container');
+    const puzzleView = document.getElementById('puzzle-view');
+    const finalScreen = document.getElementById('final-screen');
+    const victoryScreen = document.getElementById('victory-screen');
+    const timerDisplay = document.getElementById('timer-display');
+    const hintBtn = document.getElementById('hint-btn');
+    const hintBox = document.getElementById('hint-box');
+    const hintText = document.getElementById('hint-text');
+    const roomProgress = document.getElementById('room-progress');
+    const codeBanner = document.getElementById('code-banner');
+    const unlockedCodeDisplay = document.getElementById('unlocked-code-display');
+
+    // Event Listeners
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('sound-btn').addEventListener('click', toggleSound);
+    document.getElementById('hint-btn').addEventListener('click', showHint);
+    document.getElementById('next-room-btn').addEventListener('click', advanceRoom);
+    document.getElementById('unlock-master-btn').addEventListener('click', checkMasterLock);
+    document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+
+    function toggleSound() {
+      audio.muted = !audio.muted;
+      const icon = document.querySelector('#sound-btn i');
+      icon.className = audio.muted ? 'fa-solid fa-volume-xmark text-rose-400' : 'fa-solid fa-volume-high text-slate-300';
+    }
+
+    function startTimer() {
+      gameState.startTime = Date.now();
+      gameState.timerInterval = setInterval(() => {
+        gameState.elapsedSeconds = Math.floor((Date.now() - gameState.startTime) / 1000);
+        const mins = String(Math.floor(gameState.elapsedSeconds / 60)).padStart(2, '0');
+        const secs = String(gameState.elapsedSeconds % 60).padStart(2, '0');
+        timerDisplay.textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function renderProgressBadges() {
+      roomProgress.innerHTML = '';
+      for (let i = 1; i <= 6; i++) {
+        const badge = document.createElement('div');
+        const isCurrent = gameState.currentRoom === i;
+        const isSolved = gameState.roomSolved[i];
+        
+        let statusClass = 'bg-slate-900/90 text-slate-500 border-slate-800';
+        if (isSolved) statusClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50';
+        else if (isCurrent) statusClass = 'bg-purple-500/20 text-purple-300 border-purple-400 glow-purple';
+
+        badge.className = `px-2.5 py-1 rounded-lg border text-xs font-tech flex items-center gap-1 transition ${statusClass}`;
+        badge.innerHTML = `${isSolved ? '<i class="fa-solid fa-check"></i>' : ''} ${i}`;
+        roomProgress.appendChild(badge);
+      }
+
+      const masterBadge = document.createElement('div');
+      const isFinal = gameState.currentRoom === 7;
+      masterBadge.className = `px-2.5 py-1 rounded-lg border text-xs font-tech flex items-center gap-1 transition ${isFinal ? 'bg-amber-500/20 text-amber-400 border-amber-400 glow-gold' : 'bg-slate-900/90 text-slate-500 border-slate-800'}`;
+      masterBadge.innerHTML = `<i class="fa-solid fa-lock"></i> Tor`;
+      roomProgress.appendChild(masterBadge);
+    }
+
+    function startGame() {
+      audio.playClick();
+      introScreen.classList.add('hidden');
+      roomContainer.classList.remove('hidden');
+      startTimer();
+      loadRoom(1);
+    }
+
+    function showHint() {
+      audio.playClick();
+      gameState.hintsUsed++;
+      hintText.textContent = roomDetails[gameState.currentRoom].hint;
+      hintBox.classList.remove('hidden');
+    }
+
+    function loadRoom(roomNum) {
+      gameState.currentRoom = roomNum;
+      renderProgressBadges();
+      hintBox.classList.add('hidden');
+      codeBanner.classList.add('hidden');
+
+      if (roomNum > 6) {
+        showFinalDoor();
+        return;
+      }
+
+      document.getElementById('room-num-badge').textContent = `Raum ${roomNum} von 6`;
+      document.getElementById('room-title').textContent = roomDetails[roomNum].title;
+
+      puzzleView.innerHTML = '';
+
+      switch(roomNum) {
+        case 1: renderRoom1(); break;
+        case 2: renderRoom2(); break;
+        case 3: renderRoom3(); break;
+        case 4: renderRoom4(); break;
+        case 5: renderRoom5(); break;
+        case 6: renderRoom6(); break;
+      }
+    }
+
+    function roomCompleted(code) {
+      audio.playSuccess();
+      gameState.roomSolved[gameState.currentRoom] = true;
+      renderProgressBadges();
+      unlockedCodeDisplay.textContent = `CODE ZIFFER FÜR RAUM ${gameState.currentRoom}: [ ${code} ]`;
+      codeBanner.classList.remove('hidden');
+      codeBanner.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function advanceRoom() {
+      audio.playClick();
+      if (gameState.currentRoom < 6) {
+        loadRoom(gameState.currentRoom + 1);
+      } else {
+        loadRoom(7);
+      }
+    }
+
+    function renderRoom1() {
+      puzzleView.innerHTML = `
+        <div class="space-y-6">
+          <p class="text-slate-300 text-base md:text-lg">
+            Berechne die folgenden komplexeren Wurzeln mit Potenzen und Dezimalzahlen:
+          </p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase tracking-wider">AUFGABE 1</span>
+              <div class="text-2xl md:text-3xl font-extrabold text-amber-400 font-tech">√(3⁴ · 5²) = ?</div>
+              <input type="number" id="r1-a" class="w-full bg-slate-900 border-2 border-slate-700 rounded-xl py-3 px-4 text-center text-2xl font-tech text-cyan-400 outline-none focus:border-amber-400 transition" placeholder="Ergebnis">
+            </div>
+            
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase tracking-wider">AUFGABE 2</span>
+              <div class="text-2xl md:text-3xl font-extrabold text-amber-400 font-tech">√(1,69) = ?</div>
+              <input type="text" id="r1-b" class="w-full bg-slate-900 border-2 border-slate-700 rounded-xl py-3 px-4 text-center text-2xl font-tech text-cyan-400 outline-none focus:border-amber-400 transition" placeholder="z.B. 1.3">
+            </div>
+
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase tracking-wider">AUFGABE 3</span>
+              <div class="text-2xl md:text-3xl font-extrabold text-amber-400 font-tech">√(0,0064) = ?</div>
+              <input type="text" id="r1-c" class="w-full bg-slate-900 border-2 border-slate-700 rounded-xl py-3 px-4 text-center text-2xl font-tech text-cyan-400 outline-none focus:border-amber-400 transition" placeholder="z.B. 0.08">
+            </div>
+          </div>
+
+          <div class="text-center pt-4">
+            <button id="r1-submit" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold text-lg rounded-xl shadow-lg transition glow-purple">
+              <i class="fa-solid fa-key mr-2"></i> ANTWORTEN PRÜFEN
+            </button>
+            <p id="r1-feedback" class="text-base font-semibold mt-4 min-h-[24px]"></p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('r1-submit').addEventListener('click', () => {
+        const valA = document.getElementById('r1-a').value.trim();
+        const valB = document.getElementById('r1-b').value.trim().replace(',', '.');
+        const valC = document.getElementById('r1-c').value.trim().replace(',', '.');
+        const feedback = document.getElementById('r1-feedback');
+
+        if (valA === "45" && (valB === "1.3" || valB === "1,3") && (valC === "0.08" || valC === "0,08")) {
+          feedback.className = "text-emerald-400 font-bold";
+          feedback.textContent = "Ausgezeichnet! Alle Aufgaben korrekt gelöst.";
+          document.getElementById('r1-submit').disabled = true;
+          roomCompleted(gameState.unlockedCodes[1]);
+        } else {
+          audio.playError();
+          feedback.className = "text-rose-400 font-bold";
+          feedback.textContent = "Nicht ganz! Überprüfe deine Rechnungen noch einmal sorgfältig.";
+        }
+      });
+    }
+
+    function renderRoom2() {
+      const items = [
+        { id: 1, val: "-√16", target: "Z" },
+        { id: 2, val: "√8", target: "R" },
+        { id: 3, val: "0,333...", target: "Q" },
+        { id: 4, val: "-7/3", target: "Q" },
+        { id: 5, val: "√(0,81)", target: "Q" },
+        { id: 6, val: "√(2) / 2", target: "R" }
+      ];
+
+      puzzleView.innerHTML = `
+        <div class="space-y-6">
+          <p class="text-slate-300 text-base md:text-lg">
+            Ordne jeden mathematischen Ausdruck seiner <span class="text-amber-400 font-bold">kleinsten passenden Zahlenmenge</span> zu:
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            ${items.map(n => `
+              <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex items-center justify-between gap-4">
+                <span class="font-tech text-2xl font-extrabold text-amber-400 w-28 text-center bg-slate-900 py-3 px-2 rounded-xl border border-slate-700">${n.val}</span>
+                <select data-id="${n.id}" class="num-select bg-slate-900 border-2 border-slate-700 rounded-xl px-3 py-3 text-cyan-400 font-tech text-base font-bold outline-none focus:border-amber-400 flex-1 transition">
+                  <option value="">Menge...</option>
+                  <option value="N">ℕ (Natürliche)</option>
+                  <option value="Z">ℤ (Ganze)</option>
+                  <option value="Q">ℚ (Rationale)</option>
+                  <option value="R">ℝ (Reelle/Irrationale)</option>
+                </select>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="text-center pt-4">
+            <button id="r2-submit" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold text-lg rounded-xl shadow-lg transition glow-purple">
+              <i class="fa-solid fa-check-double mr-2"></i> ZUORDNUNG PRÜFEN
+            </button>
+            <p id="r2-feedback" class="text-base font-semibold mt-4 min-h-[24px]"></p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('r2-submit').addEventListener('click', () => {
+        const selects = document.querySelectorAll('.num-select');
+        let allCorrect = true;
+        const feedback = document.getElementById('r2-feedback');
+
+        selects.forEach(select => {
+          const id = parseInt(select.getAttribute('data-id'));
+          const item = items.find(x => x.id === id);
+          if (select.value !== item.target) {
+            allCorrect = false;
+            select.classList.add('border-rose-500');
+            select.classList.remove('border-slate-700');
+          } else {
+            select.classList.remove('border-rose-500', 'border-slate-700');
+            select.classList.add('border-emerald-500');
+          }
+        });
+
+        if (allCorrect) {
+          feedback.className = "text-emerald-400 font-bold";
+          feedback.textContent = "Perfekt! Alle Zahlbereiche wurden exakt zugewiesen.";
+          document.getElementById('r2-submit').disabled = true;
+          roomCompleted(gameState.unlockedCodes[2]);
+        } else {
+          audio.playError();
+          feedback.className = "text-rose-400 font-bold";
+          feedback.textContent = "Einige Zuordnungen stimmen noch nicht. Bedenke das vereinfachte Ergebnis!";
+        }
+      });
+    }
+
+    function renderRoom3() {
+      puzzleView.innerHTML = `
+        <div class="space-y-6">
+          <p class="text-slate-300 text-base md:text-lg">
+            Vereinfache die Ausdrücke mithilfe der Wurzelgesetze komplett und berechne den Endwert:
+          </p>
+
+          <div class="space-y-6 max-w-3xl mx-auto">
+            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <span class="text-2xl font-bold font-tech text-amber-400">1) &nbsp; √18 · √2 &nbsp;=</span>
+              <div class="flex items-center gap-2 font-tech text-2xl font-extrabold">
+                <span>√</span>
+                <input type="number" id="r3-1a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-cyan-400 outline-none focus:border-amber-400 transition" placeholder="?">
+                <span>=</span>
+                <input type="number" id="r3-1b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-emerald-400 outline-none focus:border-emerald-400 transition" placeholder="?">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <span class="text-2xl font-bold font-tech text-amber-400">2) &nbsp; √75 / √3 &nbsp;=</span>
+              <div class="flex items-center gap-2 font-tech text-2xl font-extrabold">
+                <span>√</span>
+                <input type="number" id="r3-2a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-cyan-400 outline-none focus:border-amber-400 transition" placeholder="?">
+                <span>=</span>
+                <input type="number" id="r3-2b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-emerald-400 outline-none focus:border-emerald-400 transition" placeholder="?">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <span class="text-2xl font-bold font-tech text-amber-400">3) &nbsp; √(2³ · 3² · 2) &nbsp;=</span>
+              <div class="flex items-center gap-2 font-tech text-2xl font-extrabold">
+                <span>√</span>
+                <input type="number" id="r3-3a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-cyan-400 outline-none focus:border-amber-400 transition" placeholder="?">
+                <span>=</span>
+                <input type="number" id="r3-3b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-emerald-400 outline-none focus:border-emerald-400 transition" placeholder="?">
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center pt-4">
+            <button id="r3-submit" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold text-lg rounded-xl shadow-lg transition glow-purple">
+              <i class="fa-solid fa-bolt mr-2"></i> BERECHNUNG BESTÄTIGEN
+            </button>
+            <p id="r3-feedback" class="text-base font-semibold mt-4 min-h-[24px]"></p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('r3-submit').addEventListener('click', () => {
+        const v1a = document.getElementById('r3-1a').value.trim();
+        const v1b = document.getElementById('r3-1b').value.trim();
+        const v2a = document.getElementById('r3-2a').value.trim();
+        const v2b = document.getElementById('r3-2b').value.trim();
+        const v3a = document.getElementById('r3-3a').value.trim();
+        const v3b = document.getElementById('r3-3b').value.trim();
+        const feedback = document.getElementById('r3-feedback');
+
+        if (v1a === "36" && v1b === "6" && v2a === "25" && v2b === "5" && v3a === "144" && v3b === "12") {
+          feedback.className = "text-emerald-400 font-bold";
+          feedback.textContent = "Stark! Wurzelgesetze wurden fehlerfrei angewendet.";
+          document.getElementById('r3-submit').disabled = true;
+          roomCompleted(gameState.unlockedCodes[3]);
+        } else {
+          audio.playError();
+          feedback.className = "text-rose-400 font-bold";
+          feedback.textContent = "Fehler in der Rechnung! Wende die Produkt- und Quotientenregeln korrekt an.";
+        }
+      });
+    }
+
+    function renderRoom4() {
+      puzzleView.innerHTML = `
+        <div class="space-y-6">
+          <p class="text-slate-300 text-base md:text-lg">
+            Ziehe teilweise die Wurzel aus den großen Radikanden (Form: <span class="text-amber-400 font-bold">a√b</span>), sodass <span class="text-cyan-400 font-bold">b</span> minimal ist:
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase">RADIKAND 1</span>
+              <div class="text-3xl font-extrabold text-amber-400 font-tech">√300</div>
+              <div class="flex items-center justify-center gap-2 text-3xl font-tech">
+                <input type="number" id="r4-1a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="a">
+                <span class="text-4xl text-amber-400">√</span>
+                <input type="number" id="r4-1b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="b">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase">RADIKAND 2</span>
+              <div class="text-3xl font-extrabold text-amber-400 font-tech">√162</div>
+              <div class="flex items-center justify-center gap-2 text-3xl font-tech">
+                <input type="number" id="r4-2a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="a">
+                <span class="text-4xl text-amber-400">√</span>
+                <input type="number" id="r4-2b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="b">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase">RADIKAND 3</span>
+              <div class="text-3xl font-extrabold text-amber-400 font-tech">√98</div>
+              <div class="flex items-center justify-center gap-2 text-3xl font-tech">
+                <input type="number" id="r4-3a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="a">
+                <span class="text-4xl text-amber-400">√</span>
+                <input type="number" id="r4-3b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="b">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
+              <span class="text-xs font-bold text-purple-300 font-tech uppercase">RADIKAND 4</span>
+              <div class="text-3xl font-extrabold text-amber-400 font-tech">√108</div>
+              <div class="flex items-center justify-center gap-2 text-3xl font-tech">
+                <input type="number" id="r4-4a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="a">
+                <span class="text-4xl text-amber-400">√</span>
+                <input type="number" id="r4-4b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-3 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="b">
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center pt-4">
+            <button id="r4-submit" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold text-lg rounded-xl shadow-lg transition glow-purple">
+              <i class="fa-solid fa-lock-open mr-2"></i> KOMBATIBILITÄT PRÜFEN
+            </button>
+            <p id="r4-feedback" class="text-base font-semibold mt-4 min-h-[24px]"></p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('r4-submit').addEventListener('click', () => {
+        const v1a = document.getElementById('r4-1a').value.trim();
+        const v1b = document.getElementById('r4-1b').value.trim();
+        const v2a = document.getElementById('r4-2a').value.trim();
+        const v2b = document.getElementById('r4-2b').value.trim();
+        const v3a = document.getElementById('r4-3a').value.trim();
+        const v3b = document.getElementById('r4-3b').value.trim();
+        const v4a = document.getElementById('r4-4a').value.trim();
+        const v4b = document.getElementById('r4-4b').value.trim();
+        const feedback = document.getElementById('r4-feedback');
+
+        if (v1a === "10" && v1b === "3" && v2a === "9" && v2b === "2" && v3a === "7" && v3b === "2" && v4a === "6" && v4b === "3") {
+          feedback.className = "text-emerald-400 font-bold";
+          feedback.textContent = "Perfekt zerlegt! Alle Radikanden sind vollständig vereinfacht.";
+          document.getElementById('r4-submit').disabled = true;
+          roomCompleted(gameState.unlockedCodes[4]);
+        } else {
+          audio.playError();
+          feedback.className = "text-rose-400 font-bold";
+          feedback.textContent = "Noch nicht ganz! Suche stets nach der größten Quadratzahl als Teiler.";
+        }
+      });
+    }
+
+    function renderRoom5() {
+      puzzleView.innerHTML = `
+        <div class="space-y-6">
+          <p class="text-slate-300 text-base md:text-lg">
+            Bestimme näherungsweise die Lage sowie die gerundeten Dezimalwerte (auf 1 Nachkommastelle):
+          </p>
+
+          <div class="space-y-6 max-w-3xl mx-auto">
+            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <span class="text-xl font-bold text-amber-400 font-tech">Zwischen welchen ganzen Zahlen liegt <span class="text-cyan-400 font-extrabold">√50</span>?</span>
+              <div class="flex items-center gap-3 font-tech text-2xl font-extrabold">
+                <input type="number" id="r5-1a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-amber-400 outline-none focus:border-amber-400 transition" placeholder="Min">
+                <span>&lt; &nbsp;√50 &nbsp;&lt;</span>
+                <input type="number" id="r5-1b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-amber-400 outline-none focus:border-amber-400 transition" placeholder="Max">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <span class="text-xl font-bold text-amber-400 font-tech">Zwischen welchen ganzen Zahlen liegt <span class="text-cyan-400 font-extrabold">√110</span>?</span>
+              <div class="flex items-center gap-3 font-tech text-2xl font-extrabold">
+                <input type="number" id="r5-2a" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-amber-400 outline-none focus:border-amber-400 transition" placeholder="Min">
+                <span>&lt; &nbsp;√110 &nbsp;&lt;</span>
+                <input type="number" id="r5-2b" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-amber-400 outline-none focus:border-amber-400 transition" placeholder="Max">
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <span class="text-xl font-bold text-amber-400 font-tech">Gib <span class="text-cyan-400 font-extrabold">√50</span> auf 1 Nachkommastelle gerundet an:</span>
+              <div class="flex items-center gap-2 font-tech text-2xl font-extrabold">
+                <span>√50 ≈</span>
+                <input type="text" id="r5-round" class="w-28 bg-slate-900 border-2 border-slate-700 rounded-xl py-2.5 text-center text-emerald-400 outline-none focus:border-emerald-400 transition" placeholder="z.B. 7.1">
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center pt-4">
+            <button id="r5-submit" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold text-lg rounded-xl shadow-lg transition glow-purple">
+              <i class="fa-solid fa-calculator mr-2"></i> NÄHERUNGSWERTE PRÜFEN
+            </button>
+            <p id="r5-feedback" class="text-base font-semibold mt-4 min-h-[24px]"></p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('r5-submit').addEventListener('click', () => {
+        const v1a = document.getElementById('r5-1a').value.trim();
+        const v1b = document.getElementById('r5-1b').value.trim();
+        const v2a = document.getElementById('r5-2a').value.trim();
+        const v2b = document.getElementById('r5-2b').value.trim();
+        const rnd = document.getElementById('r5-round').value.trim().replace(',', '.');
+        const feedback = document.getElementById('r5-feedback');
+
+        if (v1a === "7" && v1b === "8" && v2a === "10" && v2b === "11" && (rnd === "7.1" || rnd === "7,1")) {
+          feedback.className = "text-emerald-400 font-bold";
+          feedback.textContent = "Ausgezeichnet! Intervall und Runden sind korrekt.";
+          document.getElementById('r5-submit').disabled = true;
+          roomCompleted(gameState.unlockedCodes[5]);
+        } else {
+          audio.playError();
+          feedback.className = "text-rose-400 font-bold";
+          feedback.textContent = "Prüfe deine Grenzwerte und das Runden der Nachkommastelle!";
+        }
+      });
+    }
+
+    function renderRoom6() {
+      puzzleView.innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-purple-950/40 p-5 rounded-xl border border-purple-500/30 text-sm md:text-base text-purple-200 space-y-2">
+            <h3 class="font-tech text-base md:text-lg font-bold text-amber-400 flex items-center gap-2">
+              <i class="fa-solid fa-square-root-variable text-xl"></i> Der Heron-Algorithmus (Iteratives Verfahren)
+            </h3>
+            <p class="leading-relaxed">
+              Zur Berechnung der Näherung für <span class="font-tech text-amber-300 font-bold">√a</span> mit dem Startwert <span class="font-tech text-cyan-300 font-bold">x₀</span> gilt die Rekursionsformel:
+            </p>
+            <div class="bg-slate-950 p-3 rounded-lg text-center font-tech text-lg md:text-xl font-bold text-cyan-300 border border-slate-800">
+              x<sub>n+1</sub> = ½ · ( x<sub>n</sub> + a / x<sub>n</sub> )
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-center">
+            <span class="text-slate-300 text-base md:text-lg">Ziel: Berechne den Näherungswert für <span class="text-amber-400 font-extrabold text-xl">√10</span> mit dem Startwert <span class="text-cyan-400 font-extrabold text-xl">x₀ = 3</span>.</span>
+          </div>
+
+          <div class="space-y-6 max-w-3xl mx-auto">
+            <!-- Step 1 -->
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 space-y-4">
+              <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-purple-300 font-tech uppercase tracking-wider">SCHRITT 1: ERSTE NÄHERUNG (x₁)</span>
+                <span class="text-xs font-tech text-slate-400">a = 10, x₀ = 3</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div class="text-slate-300 text-sm font-semibold">
+                  Als gekürzter Bruch <span class="text-amber-400 font-tech font-bold">(Zähler / Nenner)</span>:
+                </div>
+                <div class="flex items-center justify-center md:justify-end gap-2 font-tech text-2xl font-extrabold">
+                  <span class="text-purple-300 text-lg">x₁ =</span>
+                  <input type="number" id="r6-num1" class="w-20 bg-slate-900 border-2 border-slate-700 rounded-xl py-2 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="Zähler">
+                  <span class="text-2xl text-slate-400">/</span>
+                  <input type="number" id="r6-den1" class="w-20 bg-slate-900 border-2 border-slate-700 rounded-xl py-2 text-center text-cyan-400 font-bold outline-none focus:border-amber-400 transition" placeholder="Nenner">
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 space-y-4">
+              <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-purple-300 font-tech uppercase tracking-wider">SCHRITT 2: ZWEITE NÄHERUNG (x₂)</span>
+                <span class="text-xs font-tech text-slate-400">Setze dein x₁ in die Formel ein</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div class="text-slate-300 text-sm font-semibold">
+                  Berechne den neuen Bruch <span class="text-amber-400 font-tech font-bold">x₂</span>:
+                </div>
+                <div class="flex items-center justify-center md:justify-end gap-2 font-tech text-2xl font-extrabold">
+                  <span class="text-purple-300 text-lg">x₂ =</span>
+                  <input type="number" id="r6-num2" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2 text-center text-amber-400 font-bold outline-none focus:border-amber-400 transition" placeholder="Zähler">
+                  <span class="text-2xl text-slate-400">/</span>
+                  <input type="number" id="r6-den2" class="w-24 bg-slate-900 border-2 border-slate-700 rounded-xl py-2 text-center text-amber-400 font-bold outline-none focus:border-amber-400 transition" placeholder="Nenner">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center pt-4">
+            <button id="r6-submit" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-tech font-bold text-lg rounded-xl shadow-lg transition glow-purple">
+              <i class="fa-solid fa-graduation-cap mr-2"></i> HERON-ERGEBNIS PRÜFEN
+            </button>
+            <p id="r6-feedback" class="text-base font-semibold mt-4 min-h-[24px]"></p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('r6-submit').addEventListener('click', () => {
+        const num1 = document.getElementById('r6-num1').value.trim();
+        const den1 = document.getElementById('r6-den1').value.trim();
+        const num2 = document.getElementById('r6-num2').value.trim();
+        const den2 = document.getElementById('r6-den2').value.trim();
+        const feedback = document.getElementById('r6-feedback');
+
+        // Validation:
+        // x1 = 1/2 * (3 + 10/3) = 1/2 * (19/3) = 19/6
+        // x2 = 1/2 * (19/6 + 10 / (19/6)) = 1/2 * (19/6 + 60/19) = 1/2 * (361/114 + 360/114) = 721/228
+        const isX1Correct = (num1 === "19" && den1 === "6");
+        const isX2Correct = (num2 === "721" && den2 === "228");
+
+        if (isX1Correct && isX2Correct) {
+          feedback.className = "text-emerald-400 font-bold";
+          feedback.textContent = "Großartig! Du hast beide Iterationsschritte des Heron-Verfahrens fehlerfrei berechnet!";
+          document.getElementById('r6-submit').disabled = true;
+          roomCompleted(gameState.unlockedCodes[6]);
+        } else {
+          audio.playError();
+          feedback.className = "text-rose-400 font-bold";
+          if (!isX1Correct) {
+            feedback.textContent = "Schritt 1 (x₁) ist noch falsch! Wende x₁ = ½ · (3 + 10/3) sorgfältig mit Hauptnenner an.";
+          } else {
+            feedback.textContent = "Schritt 1 (x₁) ist richtig! Prüfe Schritt 2 (x₂) nochmal: Setze dein x₁ in die Formel x₂ = ½ · (x₁ + 10 / x₁) ein.";
+          }
+        }
+      });
+    }
+
+    function showFinalDoor() {
+      roomContainer.classList.add('hidden');
+      finalScreen.classList.remove('hidden');
+
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById(`code-val-${i}`).textContent = gameState.unlockedCodes[i];
+      }
+
+      const inputs = [1,2,3,4,5,6].map(i => document.getElementById(`master-input-${i}`));
+      inputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+          if (e.target.value.length >= 1 && index < inputs.length - 1) {
+            inputs[index + 1].focus();
+          }
+        });
+      });
+    }
+
+    function checkMasterLock() {
+      let enteredCode = "";
+      for (let i = 1; i <= 6; i++) {
+        enteredCode += document.getElementById(`master-input-${i}`).value.trim();
+      }
+
+      const correctCode = `${gameState.unlockedCodes[1]}${gameState.unlockedCodes[2]}${gameState.unlockedCodes[3]}${gameState.unlockedCodes[4]}${gameState.unlockedCodes[5]}${gameState.unlockedCodes[6]}`;
+      const feedback = document.getElementById('master-feedback');
+
+      if (enteredCode === correctCode) {
+        clearInterval(gameState.timerInterval);
+        audio.playSuccess();
+        finalScreen.classList.add('hidden');
+        victoryScreen.classList.remove('hidden');
+
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 150,
+            spread: 90,
+            origin: { y: 0.6 }
+          });
+        }
+
+        const mins = String(Math.floor(gameState.elapsedSeconds / 60)).padStart(2, '0');
+        const secs = String(gameState.elapsedSeconds % 60).padStart(2, '0');
+        document.getElementById('final-time').textContent = `${mins}:${secs}`;
+        document.getElementById('final-hints').textContent = gameState.hintsUsed;
+
+        const starContainer = document.getElementById('star-rating');
+        if (gameState.hintsUsed === 0) {
+          starContainer.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>';
+        } else if (gameState.hintsUsed <= 2) {
+          starContainer.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>';
+        } else {
+          starContainer.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i>';
+        }
+      } else {
+        audio.playError();
+        feedback.textContent = "Falscher Master-Code! Überprüfe deine Codes aus den Räumen 1 bis 6.";
+      }
+    }
+  </script>
+</body>
+</html>
